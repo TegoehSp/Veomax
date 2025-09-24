@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Veo Video Generation</title>
+  <link rel="stylesheet" href="index.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" />
+</head>
+<body>
+
+  <div class="top-bar">
+    <div class="search-bar">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <span>Telusuri klip</span>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div id="status-placeholder">
+      Ketik di kotak<br>perintah untuk<br>memulai
+    </div>
+
+    <div id="loading-overlay">
+      <div class="spinner"></div>
+      <p id="loading-text">Generating...</p>
+    </div>
+
+    <div id="video-display-container">
+      <div id="video-carousel">
+        <div id="video-container">
+          <!-- Video elements will be added here dynamically -->
+        </div>
+      </div>
+      <button id="prev-video" class="video-nav-button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <button id="next-video" class="video-nav-button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+      <button id="download-video-button" class="video-nav-button" title="Download video">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      </button>
+      <div id="video-counter"></div>
+    </div>
+  </div>
+
+  <div class="bottom-bar">
+    <div class="actions-container">
+      <div class="actions-left">
+        <div id="image-upload-container" class="image-upload-container">
+          <button id="image-upload-button" class="icon-button" aria-label="Tambah gambar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+          <div id="image-upload-menu" class="image-upload-menu">
+            <label for="file-input" class="image-upload-option">Unggah Gambar</label>
+            <button id="create-image-button" class="image-upload-option">Buat Gambar</button>
+          </div>
+          <div id="image-edit-menu" class="image-upload-menu">
+            <button id="change-image-button" class="image-upload-option">Ubah Gambar</button>
+            <button id="remove-image-button" class="image-upload-option">Hapus Gambar</button>
+          </div>
+        </div>
+        <input id="file-input" type="file" accept="image/*" style="display: none;"/>
+        <div class="mode-select-container">
+          <button class="mode-select">
+            <span id="mode-select-text">Teks ke Video</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div id="mode-dropdown" class="mode-dropdown">
+            <button class="mode-option" data-mode="text">Teks ke Video</button>
+            <button class="mode-option" data-mode="image">Gambar ke Video</button>
+          </div>
+        </div>
+        <div id="model-select-container" class="mode-select-container">
+            <button id="model-select-button" class="mode-select">
+                <span id="model-select-text">Veo 2</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div id="model-dropdown" class="mode-dropdown">
+                <button class="mode-option model-option" data-model="veo-2.0-generate-001">Veo 2</button>
+                <button class="mode-option model-option" data-model="veo-3.0-generate-001">Veo 3</button>
+            </div>
+        </div>
+        <div id="settings-container" class="settings-container">
+          <button id="settings-button" class="icon-button" aria-label="Settings">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+          </button>
+          <div id="settings-menu" class="settings-menu">
+            <div class="settings-section">
+              <label>Rasio Aspek</label>
+              <div class="settings-options">
+                <button class="setting-option aspect-ratio-option active" data-ratio="16:9">16:9</button>
+                <button class="setting-option aspect-ratio-option" data-ratio="9:16">9:16</button>
+                <button class="setting-option aspect-ratio-option" data-ratio="1:1">1:1</button>
+                <button class="setting-option aspect-ratio-option" data-ratio="4:3">4:3</button>
+                <button class="setting-option aspect-ratio-option" data-ratio="3:4">3:4</button>
+              </div>
+            </div>
+            <div class="settings-section">
+              <label>Jumlah Video</label>
+              <div class="settings-options">
+                <button class="setting-option video-count-option active" data-count="1">1</button>
+                <button class="setting-option video-count-option" data-count="2">2</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="prompt-container">
+      <textarea id="prompt-input" placeholder="Masukkan teks untuk memulai pembuatan video." rows="1"></textarea>
+      <button id="generate-button" aria-label="Generate video">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </button>
+    </div>
+  </div>
+  
+  <div id="crop-modal" class="modal-overlay">
+    <div class="modal-content crop-modal-content">
+      <div class="crop-container">
+        <img id="image-to-crop">
+      </div>
+      <div class="modal-actions">
+        <button id="cancel-crop-button">Batal</button>
+        <button id="confirm-crop-button">Potong</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="image-prompt-modal" class="modal-overlay">
+    <div class="modal-content">
+      <p>Masukkan prompt untuk membuat gambar.</p>
+      <textarea id="image-prompt-input" placeholder="Contoh: Seekor kucing astronot di bulan" rows="3"></textarea>
+      <div class="settings-section">
+        <label>Jumlah Gambar</label>
+        <div class="settings-options">
+          <button class="setting-option image-count-option active" data-count="1">1</button>
+          <button class="setting-option image-count-option" data-count="2">2</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="cancel-image-prompt-button">Batal</button>
+        <button id="confirm-image-prompt-button">Buat</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="image-selection-modal" class="modal-overlay">
+    <div class="modal-content">
+      <p>Pilih gambar untuk melanjutkan</p>
+      <div id="image-selection-container">
+        <!-- Generated images will be appended here -->
+      </div>
+      <div class="modal-actions">
+        <button id="cancel-image-selection-button">Batal</button>
+        <button id="confirm-image-selection-button" disabled>Pilih</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="error-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div id="error-message-container"></div>
+      <div class="modal-actions">
+        <button id="modal-add-key-button">Add API Key</button>
+        <button id="modal-close-button">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "@google/genai": "https://esm.sh/@google/genai@^1.4.0",
+        "cropperjs": "https://esm.sh/cropperjs@1.6.2"
+      }
+    }
+  </script>
+  <script type="module" src="index.tsx"></script>
+
+</body>
+</html>
