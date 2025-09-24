@@ -27,19 +27,12 @@ body {
   padding: 16px 24px;
 }
 
-.search-bar {
-  background-color: var(--surface-color);
-  border-radius: 20px;
-  padding: 8px 16px;
+.title-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--placeholder-color);
-  max-width: 400px;
-}
-
-.search-bar svg {
-  stroke: var(--placeholder-color);
+  color: var(--on-surface-color);
+  font-size: 1.5rem;
+  font-weight: 600;
 }
 
 .main-content {
