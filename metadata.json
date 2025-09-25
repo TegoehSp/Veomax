@@ -1,5 +1,7 @@
 {
   "name": "Copy of Veomax",
   "description": "Sample from Veo models to generate videos",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "clipboard-read"
+  ]
 }

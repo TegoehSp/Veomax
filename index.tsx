@@ -4,10 +4,10 @@
  * Copyright 2025 Google LLC
  * SPDX-License-Identifier: Apache-2.0
  */
-import {GenerateVideosParameters, GoogleGenAI} from '@google/genai';
+import {GenerateContentResponse, GenerateVideosParameters, GoogleGenAI} from '@google/genai';
 import Cropper from 'cropperjs';
 
-const GEMINI_API_KEY = process.env.API_KEY;
+let geminiApiKey: string | null = null;
 
 const loadingMessages = [
   'Memulai proses pembuatan...',
@@ -55,7 +55,11 @@ async function generateContent(
   aspectRatioValue: string,
   videoCount: number,
 ) {
-  const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
+  if (!geminiApiKey) {
+    showErrorModal(['Silakan atur API Key Gemini Anda terlebih dahulu.']);
+    return;
+  }
+  const ai = new GoogleGenAI({apiKey: geminiApiKey});
 
   // Start with a base configuration
   const payload: GenerateVideosParameters = {
@@ -91,7 +95,7 @@ async function generateContent(
 
   for (const v of videos) {
     const url = decodeURIComponent(v.video.uri);
-    const res = await fetch(`${url}&key=${GEMINI_API_KEY}`);
+    const res = await fetch(`${url}&key=${geminiApiKey}`);
     const blob = await res.blob();
     const objectURL = URL.createObjectURL(blob);
     
@@ -127,6 +131,19 @@ const generateButton = document.querySelector(
 ) as HTMLButtonElement;
 const loadingOverlay = document.querySelector('#loading-overlay') as HTMLDivElement;
 const loadingText = document.querySelector('#loading-text') as HTMLParagraphElement;
+
+// API Key Modal Elements
+const apiKeyModal = document.querySelector('#api-key-modal') as HTMLDivElement;
+const apiKeyInput = document.querySelector('#api-key-input') as HTMLInputElement;
+const saveApiKeyButton = document.querySelector('#save-api-key-button') as HTMLButtonElement;
+const apiKeySettingsButton = document.querySelector('#api-key-settings-button') as HTMLButtonElement;
+const pasteApiKeyButton = document.querySelector('#paste-api-key-button') as HTMLButtonElement;
+const cancelApiKeyButton = document.querySelector('#cancel-api-key-button') as HTMLButtonElement;
+const apiKeyValidationFeedback = document.querySelector('#api-key-validation-feedback') as HTMLDivElement;
+const toggleApiKeyVisibilityButton = document.querySelector('#toggle-api-key-visibility') as HTMLButtonElement;
+const eyeIcon = document.querySelector('.eye-icon') as SVGElement;
+const eyeOffIcon = document.querySelector('.eye-off-icon') as SVGElement;
+
 
 // Video Carousel Elements
 const videoDisplayContainer = document.querySelector('#video-display-container') as HTMLDivElement;
@@ -243,9 +260,12 @@ modalCloseButton.addEventListener('click', () => {
   errorModal.style.display = 'none';
 });
 
-modalAddKeyButton.addEventListener('click', async () => {
-  await window.aistudio?.openSelectKey();
+modalAddKeyButton.addEventListener('click', () => {
   errorModal.style.display = 'none';
+  if (geminiApiKey) {
+    apiKeyInput.value = geminiApiKey;
+  }
+  apiKeyModal.style.display = 'flex';
 });
 
 imageUploadButton.addEventListener('click', () => {
@@ -302,13 +322,19 @@ confirmImagePromptButton.addEventListener('click', async () => {
       return;
   }
 
+  if (!geminiApiKey) {
+    imagePromptModal.style.display = 'none';
+    showErrorModal(['Silakan atur API Key Gemini Anda terlebih dahulu.']);
+    return;
+  }
+
   const originalButtonText = confirmImagePromptButton.textContent;
   confirmImagePromptButton.textContent = 'Membuat...';
   confirmImagePromptButton.disabled = true;
   cancelImagePromptButton.disabled = true;
 
   try {
-      const ai = new GoogleGenAI({apiKey: GEMINI_API_KEY});
+      const ai = new GoogleGenAI({apiKey: geminiApiKey});
       const response = await ai.models.generateImages({
           model: 'imagen-4.0-generate-001',
           prompt: imagePrompt,
@@ -564,6 +590,11 @@ function updateVideoCarouselUI() {
 }
 
 async function generate() {
+  if (!geminiApiKey) {
+    showErrorModal(['Silakan atur API Key Gemini Anda terlebih dahulu.']);
+    return;
+  }
+
   if (currentMode === 'image' && !base64data) {
     showErrorModal(['Silakan unggah dan potong gambar untuk mode "Gambar ke Video".']);
     return;
@@ -606,11 +637,38 @@ async function generate() {
   } catch (e) {
     console.error('Video generation failed:', e);
     const error = e as Error;
-    showErrorModal([
-      'Video generation failed.',
-      'This can happen if the model is unavailable or if the API key is invalid.',
-      `Details: ${error.message}`
-    ]);
+    let errorMessages = [
+        'Pembuatan video gagal.',
+        'Ini bisa terjadi jika model tidak tersedia atau jika API key tidak valid.',
+    ];
+
+    try {
+        const errorMessage = error.message || String(e);
+        // The error message from the API might be prefixed or suffixed with text.
+        // Find the start of the JSON object and the end of it to parse correctly.
+        const jsonStartIndex = errorMessage.indexOf('{');
+        const jsonEndIndex = errorMessage.lastIndexOf('}');
+        
+        if (jsonStartIndex > -1 && jsonEndIndex > jsonStartIndex) {
+            const jsonPart = errorMessage.substring(jsonStartIndex, jsonEndIndex + 1);
+            const parsedError = JSON.parse(jsonPart);
+            if (parsedError?.error?.status === 'RESOURCE_EXHAUSTED') {
+                errorMessages = [
+                    'Pembuatan Video Gagal: Kuota Terlampaui',
+                    'Kuota penggunaan API key Anda telah habis. Silakan gunakan API key yang berbeda melalui menu pengaturan.',
+                ];
+            } else {
+                 errorMessages.push(`Detail: ${errorMessage}`);
+            }
+        } else {
+             errorMessages.push(`Detail: ${errorMessage}`);
+        }
+    } catch (parseError) {
+        // If parsing still fails, just show the raw error.
+        errorMessages.push(`Detail: ${error.message || String(e)}`);
+    }
+
+    showErrorModal(errorMessages);
     statusPlaceholder.style.display = 'block';
   } finally {
     clearInterval(messageInterval);
@@ -624,3 +682,118 @@ async function generate() {
     settingsButton.disabled = false;
   }
 }
+
+// --- API Key Management ---
+const checkmarkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+const xIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+
+async function validateApiKey(key: string): Promise<boolean> {
+  try {
+    const ai = new GoogleGenAI({apiKey: key});
+    // Use a simple, low-cost call to validate the key.
+    const response: GenerateContentResponse = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: 'test' });
+    
+    // A truly valid key will result in a response with actual text content.
+    // If the key is invalid, the API might not throw but return a response
+    // without content, making `response.text` empty.
+    if (response && response.text && response.text.trim().length > 0) {
+      return true;
+    } else {
+      // The call succeeded without throwing, but returned an empty/invalid response.
+      console.error("API Key validation returned a response with no text content:", response);
+      return false;
+    }
+  } catch (e) {
+    // If the API call throws an error (e.g., 400 for a bad key), it's definitely invalid.
+    console.error("API Key validation failed with an exception:", e);
+    return false;
+  }
+}
+
+function showValidationFeedback(type: 'success' | 'error', message: string) {
+  apiKeyValidationFeedback.innerHTML = `
+    ${type === 'success' ? checkmarkIcon : xIcon}
+    <span>${message}</span>
+  `;
+  apiKeyValidationFeedback.className = type === 'success' ? 'validation-success' : 'validation-error';
+}
+
+function setApiKeyModalLoading(isLoading: boolean) {
+    saveApiKeyButton.classList.toggle('loading', isLoading);
+    saveApiKeyButton.disabled = isLoading;
+    cancelApiKeyButton.disabled = isLoading;
+    apiKeyInput.disabled = isLoading;
+    pasteApiKeyButton.disabled = isLoading;
+}
+
+function resetApiKeyModal() {
+    apiKeyInput.value = '';
+    apiKeyValidationFeedback.innerHTML = '';
+    setApiKeyModalLoading(false);
+}
+
+toggleApiKeyVisibilityButton.addEventListener('click', () => {
+    const isPassword = apiKeyInput.type === 'password';
+    apiKeyInput.type = isPassword ? 'text' : 'password';
+    eyeIcon.style.display = isPassword ? 'none' : 'block';
+    eyeOffIcon.style.display = isPassword ? 'block' : 'none';
+    toggleApiKeyVisibilityButton.setAttribute('aria-label', isPassword ? 'Sembunyikan API Key' : 'Lihat API Key');
+});
+
+apiKeySettingsButton.addEventListener('click', () => {
+  if (geminiApiKey) {
+    apiKeyInput.value = geminiApiKey;
+  }
+  apiKeyModal.style.display = 'flex';
+});
+
+pasteApiKeyButton.addEventListener('click', async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text) {
+      apiKeyInput.value = text;
+    }
+  } catch (err) {
+    console.error('Gagal membaca papan klip: ', err);
+  }
+});
+
+cancelApiKeyButton.addEventListener('click', () => {
+  apiKeyModal.style.display = 'none';
+  resetApiKeyModal();
+});
+
+saveApiKeyButton.addEventListener('click', async () => {
+  const newKey = apiKeyInput.value.trim();
+  if (!newKey) {
+    showValidationFeedback('error', 'API Key tidak boleh kosong.');
+    return;
+  }
+
+  setApiKeyModalLoading(true);
+  apiKeyValidationFeedback.innerHTML = '';
+
+  const isValid = await validateApiKey(newKey);
+
+  if (isValid) {
+    showValidationFeedback('success', 'API Key Valid!');
+    await delay(1500); // Let user see the success message
+    localStorage.setItem('geminiApiKey', newKey);
+    geminiApiKey = newKey;
+    apiKeyModal.style.display = 'none';
+    resetApiKeyModal();
+  } else {
+    setApiKeyModalLoading(false);
+    showValidationFeedback('error', 'API Key tidak valid. Silakan periksa kembali.');
+  }
+});
+
+
+function initializeApp() {
+  geminiApiKey = localStorage.getItem('geminiApiKey');
+  if (!geminiApiKey) {
+    apiKeyModal.style.display = 'flex';
+  }
+}
+
+initializeApp();
