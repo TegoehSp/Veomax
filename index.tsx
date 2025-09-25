@@ -139,6 +139,7 @@ const saveApiKeyButton = document.querySelector('#save-api-key-button') as HTMLB
 const apiKeySettingsButton = document.querySelector('#api-key-settings-button') as HTMLButtonElement;
 const pasteApiKeyButton = document.querySelector('#paste-api-key-button') as HTMLButtonElement;
 const cancelApiKeyButton = document.querySelector('#cancel-api-key-button') as HTMLButtonElement;
+const deleteApiKeyButton = document.querySelector('#delete-api-key-button') as HTMLButtonElement;
 const apiKeyValidationFeedback = document.querySelector('#api-key-validation-feedback') as HTMLDivElement;
 const toggleApiKeyVisibilityButton = document.querySelector('#toggle-api-key-visibility') as HTMLButtonElement;
 const eyeIcon = document.querySelector('.eye-icon') as SVGElement;
@@ -262,10 +263,7 @@ modalCloseButton.addEventListener('click', () => {
 
 modalAddKeyButton.addEventListener('click', () => {
   errorModal.style.display = 'none';
-  if (geminiApiKey) {
-    apiKeyInput.value = geminiApiKey;
-  }
-  apiKeyModal.style.display = 'flex';
+  openApiKeyModal();
 });
 
 imageUploadButton.addEventListener('click', () => {
@@ -722,14 +720,23 @@ function setApiKeyModalLoading(isLoading: boolean) {
     saveApiKeyButton.classList.toggle('loading', isLoading);
     saveApiKeyButton.disabled = isLoading;
     cancelApiKeyButton.disabled = isLoading;
+    deleteApiKeyButton.disabled = isLoading;
     apiKeyInput.disabled = isLoading;
     pasteApiKeyButton.disabled = isLoading;
 }
 
-function resetApiKeyModal() {
+function openApiKeyModal() {
+  apiKeyValidationFeedback.innerHTML = '';
+  setApiKeyModalLoading(false);
+
+  if (geminiApiKey) {
+    apiKeyInput.value = geminiApiKey;
+    deleteApiKeyButton.style.display = 'flex';
+  } else {
     apiKeyInput.value = '';
-    apiKeyValidationFeedback.innerHTML = '';
-    setApiKeyModalLoading(false);
+    deleteApiKeyButton.style.display = 'none';
+  }
+  apiKeyModal.style.display = 'flex';
 }
 
 toggleApiKeyVisibilityButton.addEventListener('click', () => {
@@ -740,12 +747,7 @@ toggleApiKeyVisibilityButton.addEventListener('click', () => {
     toggleApiKeyVisibilityButton.setAttribute('aria-label', isPassword ? 'Sembunyikan API Key' : 'Lihat API Key');
 });
 
-apiKeySettingsButton.addEventListener('click', () => {
-  if (geminiApiKey) {
-    apiKeyInput.value = geminiApiKey;
-  }
-  apiKeyModal.style.display = 'flex';
-});
+apiKeySettingsButton.addEventListener('click', openApiKeyModal);
 
 pasteApiKeyButton.addEventListener('click', async () => {
   try {
@@ -760,7 +762,15 @@ pasteApiKeyButton.addEventListener('click', async () => {
 
 cancelApiKeyButton.addEventListener('click', () => {
   apiKeyModal.style.display = 'none';
-  resetApiKeyModal();
+});
+
+deleteApiKeyButton.addEventListener('click', () => {
+  localStorage.removeItem('geminiApiKey');
+  geminiApiKey = null;
+  apiKeyInput.value = '';
+  deleteApiKeyButton.style.display = 'none';
+  apiKeyValidationFeedback.innerHTML = '';
+  apiKeyInput.focus();
 });
 
 saveApiKeyButton.addEventListener('click', async () => {
@@ -781,7 +791,6 @@ saveApiKeyButton.addEventListener('click', async () => {
     localStorage.setItem('geminiApiKey', newKey);
     geminiApiKey = newKey;
     apiKeyModal.style.display = 'none';
-    resetApiKeyModal();
   } else {
     setApiKeyModalLoading(false);
     showValidationFeedback('error', 'API Key tidak valid. Silakan periksa kembali.');

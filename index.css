@@ -644,6 +644,11 @@ body {
     color: var(--on-surface-color);
 }
 
+#delete-api-key-button {
+  background-color: var(--error-color);
+  color: white;
+}
+
 /* API Key Validation Feedback */
 #api-key-validation-feedback {
   display: flex;
